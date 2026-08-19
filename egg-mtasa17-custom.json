@@ -1,0 +1,42 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED FOR PTERODACTYL PANEL",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-08-19T09:45:00+02:00",
+    "name": "MTA:SA 1.7 Custom",
+    "author": "tomika901",
+    "description": "Custom MTA:SA 1.7 x64 Pterodactyl egg. Requires the local mtasa17-pterodactyl:latest runtime image and mtasa17-custom-installer:latest installer image from the supplied server bundle.",
+    "features": null,
+    "docker_images": {
+        "MTA:SA 1.7 Custom": "~mtasa17-pterodactyl:latest"
+    },
+    "file_denylist": [],
+    "startup": "./mta-server64 --port {{SERVER_PORT}} --httpport {{SERVER_WEBPORT}} -n",
+    "config": {
+        "files": "{}",
+        "startup": "{\"done\":\"Server started and is ready to accept connections!\"}",
+        "logs": "{}",
+        "stop": "quit"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\nset -e\n\necho \"======================================\"\necho \" Custom MTA:SA 1.7 installation\"\necho \"======================================\"\n\nif [ ! -x /opt/mtasa/mta-server64 ] || [ ! -d /opt/mtasa/x64 ]; then\n    echo \"ERROR: Wrong or missing installer image.\"\n    echo \"Expected: mtasa17-custom-installer:latest\"\n    exit 20\nfi\n\nmkdir -p /mnt/server\n\n# A custom engine minden reinstallnál frissül.\nrm -rf /mnt/server/x64\ncp -a /opt/mtasa/x64 /mnt/server/\n\ncp -af /opt/mtasa/mta-server64 /mnt/server/mta-server64\nchmod +x /mnt/server/mta-server64\n\n# Root szintű szükséges fájlok frissítése.\nfind /opt/mtasa -maxdepth 1 -type f \\\n    ! -name 'mta-server64' \\\n    -exec cp -af {} /mnt/server/ \\;\n\n# Configok és resource-ok:\n# meglévő saját fájlokat nem írjuk felül.\nmkdir -p /mnt/server/mods/deathmatch\ncp -an /opt/mtasa/mods/deathmatch/. /mnt/server/mods/deathmatch/\n\n# A custom kliens miatt ne kényszerítsen stock MTA frissítést.\nCONF=\"/mnt/server/mods/deathmatch/mtaserver.conf\"\nif [ -f \"$CONF\" ]; then\n    sed -i \\\n      -e 's#<minclientversion>.*</minclientversion>#<minclientversion></minclientversion>#' \\\n      -e 's#<minclientversion_auto_update>.*</minclientversion_auto_update>#<minclientversion_auto_update>0</minclientversion_auto_update>#' \\\n      -e 's#<recommendedclientversion>.*</recommendedclientversion>#<recommendedclientversion></recommendedclientversion>#' \\\n      \"$CONF\"\nfi\n\necho \"======================================\"\necho \" Installation complete\"\necho \" Runtime: mtasa17-pterodactyl:latest\"\necho \"======================================\"\n",
+            "container": "mtasa17-custom-installer:latest",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "HTTP Port",
+            "description": "MTA HTTP port. Add this port as a TCP allocation on the server.",
+            "env_variable": "SERVER_WEBPORT",
+            "default_value": "22005",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|numeric|between:1,65535",
+            "field_type": "text"
+        }
+    ]
+}
